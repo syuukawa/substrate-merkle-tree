@@ -8,6 +8,7 @@ edition = "2018"
 hex-literal = "0.1.0"
 serde = { version = "1.0", default-features = false }
 serde_derive = { version = "1.0", optional = true }
+serde_json = { version = "1.0", default-features = false }
 safe-mix = { version = "1.0", default-features = false}
 parity-codec = { version = "2.1", default-features = false }
 parity-codec-derive = { version = "2.1", default-features = false }
