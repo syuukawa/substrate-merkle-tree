@@ -62,19 +62,20 @@ decl_module! {
             Ok(())
         }
 
-        pub fn verify_proof(proof: Vec<Option<T::Hash>>, value: Vec<u8>, is_even: bool, root_hash: T::Hash) -> Result {
+        pub fn verify_proof(proof: Vec<Option<T::Hash>>, value: Vec<u8>, node_n: u128, root_hash: T::Hash) -> Result {
             let mut value_hash = T::Hashing::hash_of(&value);
             for i in 0..proof.len() {
                 let hash = proof[i];
                 value_hash = match hash {
                     Some(h) => {
-                        let pair = if is_even && i == 0 as usize {[h, value_hash]} else {[value_hash, h]};
+                        let is_even = 2u128.pow(i as u32) & node_n != 0;
+                        let pair = if is_even {[h, value_hash]} else {[value_hash, h]};
                         T::Hashing::hash_of(&pair)
                     },
                     None => T::Hashing::hash_of(&value_hash),
                 }
             }
-            ensure!(value_hash == root_hash, "Root hash not valid");
+            ensure!(value_hash == root_hash, "Proof not valid");
             Ok(())
         }
     }

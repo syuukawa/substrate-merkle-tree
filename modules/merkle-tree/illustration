@@ -1,0 +1,20 @@
+                        ABCDEFGHIJKL1
+                      /               \
+              ABCDEFGH                 IJKL1
+            /          \                 |
+       ABCD             EFGH            IJKL
+      /    \           /    \          /    \
+    AB      CD       EF      GH      IJ      KL
+   /  \     / \     / \     / \      / \     / \
+  A    B   C   D   E   F   G   H    I   J   K   L
+  |    |   |   |   |   |   |   |    |   |   |   |
+ "a"  "b" "c" "d" "e" "f" "g" "h"  "i" "j" "k" "l"
+
+A - 000
+B - 001
+C - 010
+D - 011
+E - 100
+F - 101
+G - 110
+H - 111

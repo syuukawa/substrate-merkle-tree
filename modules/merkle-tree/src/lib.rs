@@ -316,10 +316,9 @@ mod tests {
 			let event_values = get_event_values();
 			client_tree.build_tree_from_events(event_values);
 
-			let node_number = client_tree.get_node_number(a.clone());
-			let is_even = node_number % 2 == 0;
+			let node_index = client_tree.get_node_index(a.clone());
 			let proof = client_tree.get_proof_for(a.clone(), root_hash.unwrap());
-			let res = MerkleTree::verify_proof(proof.unwrap(), a.clone(), is_even, root_hash.unwrap());
+			let res = MerkleTree::verify_proof(proof.unwrap(), a.clone(), node_index, root_hash.unwrap());
 			assert_eq!(res, Ok(()));
 		});
 	}
@@ -353,35 +352,71 @@ mod tests {
 			let event_values = get_event_values();
 			client_tree.build_tree_from_events(event_values);
 
-			let node_number = client_tree.get_node_number(a.clone());
-			let is_even = node_number % 2 == 0;
+			let mut node_index = client_tree.get_node_index(a.clone());
 			let mut proof = client_tree.get_proof_for(a.clone(), root_hash_after_b.unwrap());
-			let mut res = MerkleTree::verify_proof(proof.unwrap(), a.clone(), is_even, root_hash_after_b.unwrap());
+			let mut res = MerkleTree::verify_proof(proof.unwrap(), a.clone(), node_index, root_hash_after_b.unwrap());
 			assert_eq!(res, Ok(()));
 
 			proof = client_tree.get_proof_for(a.clone(), root_hash_after_c.unwrap());
-			res = MerkleTree::verify_proof(proof.unwrap(), a.clone(), is_even, root_hash_after_c.unwrap());
+			res = MerkleTree::verify_proof(proof.unwrap(), a.clone(), node_index, root_hash_after_c.unwrap());
 			assert_eq!(res, Ok(()));
 
 			proof = client_tree.get_proof_for(a.clone(), root_hash_after_d.unwrap());
-			res = MerkleTree::verify_proof(proof.unwrap(), a.clone(), is_even, root_hash_after_d.unwrap());
+			res = MerkleTree::verify_proof(proof.unwrap(), a.clone(), node_index, root_hash_after_d.unwrap());
 			assert_eq!(res, Ok(()));
 
-			// For b also
-
-			let node_number = client_tree.get_node_number(b.clone());
-			let is_even = node_number % 2 == 0;
+			// For b
+			node_index = client_tree.get_node_index(b.clone());
 			proof = client_tree.get_proof_for(b.clone(), root_hash_after_b.unwrap());
-			res = MerkleTree::verify_proof(proof.unwrap(), b.clone(), is_even, root_hash_after_b.unwrap());
+			res = MerkleTree::verify_proof(proof.unwrap(), b.clone(), node_index, root_hash_after_b.unwrap());
 			assert_eq!(res, Ok(()));
 
 			proof = client_tree.get_proof_for(b.clone(), root_hash_after_c.unwrap());
-			res = MerkleTree::verify_proof(proof.unwrap(), b.clone(), is_even, root_hash_after_c.unwrap());
+			res = MerkleTree::verify_proof(proof.unwrap(), b.clone(), node_index, root_hash_after_c.unwrap());
 			assert_eq!(res, Ok(()));
 
 			proof = client_tree.get_proof_for(b.clone(), root_hash_after_d.unwrap());
-			res = MerkleTree::verify_proof(proof.unwrap(), b.clone(), is_even, root_hash_after_d.unwrap());
+			res = MerkleTree::verify_proof(proof.unwrap(), b.clone(), node_index, root_hash_after_d.unwrap());
 			assert_eq!(res, Ok(()));
+
+			// For c
+			node_index = client_tree.get_node_index(c.clone());
+			proof = client_tree.get_proof_for(c.clone(), root_hash_after_c.unwrap());
+			res = MerkleTree::verify_proof(proof.unwrap(), c.clone(), node_index, root_hash_after_c.unwrap());
+			assert_eq!(res, Ok(()));
+
+			proof = client_tree.get_proof_for(c.clone(), root_hash_after_d.unwrap());
+			res = MerkleTree::verify_proof(proof.unwrap(), c.clone(), node_index, root_hash_after_d.unwrap());
+			assert_eq!(res, Ok(()));
+
+			// For d
+			node_index = client_tree.get_node_index(d.clone());
+			proof = client_tree.get_proof_for(d.clone(), root_hash_after_d.unwrap());
+			res = MerkleTree::verify_proof(proof.unwrap(), d.clone(), node_index, root_hash_after_d.unwrap());
+			assert_eq!(res, Ok(()));
+		});
+	}
+
+	#[test]
+	fn should_not_be_able_to_create_proof_if_node_is_not_in_the_state() {
+		with_externalities(&mut new_test_ext(), || {
+			let a = "a".to_string().as_bytes().to_vec();
+			let b = "b".to_string().as_bytes().to_vec();
+			let c = "c".to_string().as_bytes().to_vec();
+
+			let result = MerkleTree::insert(a.clone());
+			assert_eq!(result, Ok(()));
+
+			let root_hash = MerkleTree::root_hash();
+
+			let mut client_tree = MerkleTreeClient::new();
+			let event_values = get_event_values();
+			client_tree.build_tree_from_events(event_values);
+
+			let mut proof = client_tree.get_proof_for(b.clone(), root_hash.unwrap());
+			assert_eq!(proof, Err("Node not found in specified tree state!"));
+			proof = client_tree.get_proof_for(c.clone(), root_hash.unwrap());
+			assert_eq!(proof, Err("Node not found in specified tree state!"));
 		});
 	}
 }

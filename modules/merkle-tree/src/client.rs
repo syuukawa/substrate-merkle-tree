@@ -24,7 +24,8 @@ pub struct Node {
 pub struct MerkleTreeClient {
     pub root_hash: Option<H256>,
     pub n_nodes: u128,
-    pub node_numbers: HashMap<H256, u128>,
+    // zero based index of a node
+    pub node_indices: HashMap<H256, u128>,
     pub edge_nodes: EdgeNodes,
     pub tree: Tree,
 }
@@ -34,7 +35,7 @@ impl MerkleTreeClient {
         MerkleTreeClient {
             root_hash: None,
             n_nodes: 0,
-            node_numbers: HashMap::new(),
+            node_indices: HashMap::new(),
             edge_nodes: vec![],
             tree: HashMap::new(),
         }
@@ -49,13 +50,19 @@ impl MerkleTreeClient {
     pub fn get_proof_for(self: &Self, value: Vec<u8>, root_hash: H256) -> Result<Proof, &'static str> {
         let value_hash = BlakeTwo256::hash_of(&value);
         let proof: Vec<Option<H256>> = vec![];
-        let tree = self.load_snapshot(&root_hash);
-        self.find_node(&tree, proof, value_hash, root_hash).ok_or("Proof not found")
+        if value_hash == root_hash {
+            return Ok(proof);
+        }
+        let tree_result = self.load_snapshot(&root_hash);
+        match tree_result {
+            Ok(tree) => self.find_node(&tree, proof, value_hash, root_hash).ok_or("Proof not found!"),
+            Err(_e) => Err("Node not found in specified tree state!")
+        }
     }
 
-    pub fn get_node_number(self: &Self, value: Vec<u8>) -> u128 {
+    pub fn get_node_index(self: &Self, value: Vec<u8>) -> u128 {
         let value_hash = BlakeTwo256::hash_of(&value);
-        *self.node_numbers.get(&value_hash).unwrap()
+        *self.node_indices.get(&value_hash).unwrap()
     }
 
     fn find_node(self: &Self, tree: &Tree, mut proof: Vec<Option<H256>>, hash: H256, node_hash: H256) -> Option<Proof> {
@@ -114,11 +121,13 @@ impl MerkleTreeClient {
         }
 
         self.root_hash = Some(pair_hash);
+        self.node_indices.insert(value_hash, self.n_nodes);
         self.n_nodes += 1;
-        self.node_numbers.insert(value_hash, self.n_nodes);
         self.update_edges(new_edge, next_edge_addition_level as usize);
 
-        self.save_snapshot(&pair_hash, &self.tree)
+        if value_hash != pair_hash {
+            self.save_snapshot(&pair_hash, &self.tree);
+        }
     }
 
     fn save_snapshot(self: &Self, new_root_hash: &H256, tree: &Tree) {
@@ -128,19 +137,29 @@ impl MerkleTreeClient {
             Ok(data) => {
                 let mut file = File::create(name).expect("Could not create file!");
                 file.write_all(data.as_bytes()).expect("Failed to write to file!");
+                file.sync_all().expect("Failed to sync file!");
             },
             Err(e) => panic!(e),
         }
     }
 
-    fn load_snapshot(self: &Self, root_hash: &H256) -> Tree {
+    fn load_snapshot(self: &Self, root_hash: &H256) -> Result<Tree, &'static str> {
         let name = format!("src/snapshots/{:?}", root_hash);
-        let mut file = File::open(name).expect("Could not open file!");
+        let file = File::open(name);
         let mut content = String::new();
-        file.read_to_string(&mut content).expect("Could not read file!");;
-
-        let tree: Tree = serde_json::from_str(&content).unwrap();
-        tree
+        match file {
+            Ok(mut f) => {
+                let read = f.read_to_string(&mut content);
+                match read {
+                    Ok(_a) => {
+                        let tree: Tree = serde_json::from_str(&content).unwrap();
+                        Ok(tree)
+                    },
+                    Err(_e) => Err("Could not parse tree json!"),
+                }
+            },
+            Err(_e) => Err("Could not read file!"),
+        }
     }
 
     fn update_edges(self: &mut Self, new_edge_value: H256, addition_at_level: usize) {
